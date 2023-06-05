@@ -14,6 +14,6 @@ const storage = multer.diskStorage({
       cb(new Error('Invalid file format. Only PDF files are allowed.'), false);
     }
   };
-  const upload = multer({ storage: storage , fileFilter});
+  const upload = multer({ storage: storage ,fileFilter});
 
   module.exports=upload

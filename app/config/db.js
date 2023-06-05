@@ -1,6 +1,8 @@
 const Sequelize = require('sequelize');
 
-const sequelize = new Sequelize('novastrid', 'root', 'root123', {
+require('dotenv').config();
+
+const sequelize = new Sequelize('novastrid', process.env.DB_USER, process.env.DB_PASSWORD, {
     dialect: 'mysql'
 });
 

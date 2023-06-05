@@ -1,6 +1,8 @@
 const bcrypt = require('bcrypt');
 
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+
+require('dotenv').config();
 
 const user_qualification = require('../models/user_qulification')
 
@@ -26,7 +28,7 @@ const login = async (req, res) => {
 
     const token = jwt.sign({
       Email
-    }, 'AdminKey',{expiresIn:'1h'})
+    }, process.env.JWT_ADMIN,{expiresIn:'1h'})
 
     res.json({ token })
 

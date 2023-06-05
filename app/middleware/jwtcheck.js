@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+require('dotenv').config();
 
 const admin=  (req, res, next) => {
     const token = req.header('token')
@@ -15,7 +16,7 @@ const admin=  (req, res, next) => {
     }
 
     try {
-        const user = jwt.verify(token, "AdminKey")
+        const user = jwt.verify(token, process.env.JWT_ADMIN)
         req.user = user.Email;
         next();
     } catch (error) {
@@ -44,7 +45,7 @@ const user =  (req, res, next) => {
     }
 
     try {
-        const user = jwt.verify(token, "UserKey")
+        const user = jwt.verify(token, process.env.JWT_USER)
         req.user = user.Email;
         next();
     } catch (error) {

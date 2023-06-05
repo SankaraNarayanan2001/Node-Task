@@ -2,7 +2,9 @@ const user_info = require("../models/user_info");
 
 const user_address=require('../models/user_address');
 
-const user_qualification=require('../models/user_qulification')
+const user_qualification=require('../models/user_qulification');
+
+require('dotenv').config();
 
 const jwt=require('jsonwebtoken');
 
@@ -31,7 +33,7 @@ const loginUser= async (req, res) => {
 
     const token = jwt.sign({
       Email
-    }, 'UserKey')
+    }, process.env.JWT_USER)
 
     res.json({ token })
 
