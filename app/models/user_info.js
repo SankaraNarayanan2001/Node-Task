@@ -1,13 +1,14 @@
 
-const sequelize = require('../config/db')
 
+const sequelize=require('../config/db');
 const { DataTypes, Model } = require('sequelize');
+
 
 class User_info extends Model {
 
 }
 
-User_info.init({
+const userSchema=User_info.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -70,7 +71,11 @@ User_info.init({
   },
   Resume: {
     type: DataTypes.STRING, // image upload 
-    allowNull: false,
+    allowNull: true,
+  },
+  RestToken:{
+    type:DataTypes.STRING,
+    allowNull:true
   }
 
 }, {
@@ -81,5 +86,7 @@ User_info.init({
 }
 
 );
+
+
 
 module.exports = User_info;

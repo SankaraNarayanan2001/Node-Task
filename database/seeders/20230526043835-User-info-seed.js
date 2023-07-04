@@ -23,7 +23,6 @@ module.exports = {
       Occupation: 'IT',
       Native_Place: 'Madurai',
       First_Language: 'Tamil',
-      Resume: 'image.pdf',
 
 
     }]);

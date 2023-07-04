@@ -1,32 +1,36 @@
 const user_info = require("../models/user_info");
 
-const user_address=require('../models/user_address');
+const user_address = require('../models/user_address');
 
-const user_qualification=require('../models/user_qulification');
+const appError = require('../utils/appError')
+
+const user_qualification = require('../models/user_qulification');
+
+const asyncErrorHandler = require('../utils/asyncErrorHandler')
 
 require('dotenv').config();
 
-const jwt=require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 
 const bcrypt = require('bcrypt');
 
-const loginUser= async (req, res) => {
+//LOGIN USER
+const loginUser = asyncErrorHandler(async (req, res, next) => {
 
-  
+
   const { Email, Password } = req.body;
 
 
   if (!Email || !Password) {
-    res.status(400).json({ message: 'Email and password are required' });
-    return;
+    return next(new appError(400, "Email and password are required"));
   }
- 
-  const UserId = await user_info.findOne({where:{Email}});
 
-  if (!UserId|| UserId.id=='1') {
-   return  res.status(404).send({ message: 'User not found' });
+  const UserId = await user_info.findOne({ where: { Email } });
+
+  if (!UserId || UserId.id == '1') {
+    return next(new appError(404, "User not found"));
   }
- 
+
   const passwordcompare = await bcrypt.compare(Password, UserId.Password)
 
   if (Email === UserId.Email && passwordcompare) {
@@ -35,31 +39,40 @@ const loginUser= async (req, res) => {
       Email
     }, process.env.JWT_USER)
 
-    res.json({ token })
+    res.status(201).json({
+      status: 'Success',
+      message: 'Successfully Authenticated',
+      data: {
+        token
+      }
+    });
 
 
   }
   else {
-    res.status(500).json({ message: 'Username or password incorrect' })
+    return next(new appError(500, "Username or password incorrect"));
   }
-}
+})
 
+//GET USER
+const getUser = asyncErrorHandler(async (req, res, next) => {
 
-const getUser=async (req,res)=>{
+  const Email = req.user
 
-    const Email=req.user
-    try {
-      const users = await user_info.findOne({
-        where:{Email},
-        include: [
-          { model: user_address },
-          { model: user_qualification },
-        ]
-      });
-        return res.json(users);
-      } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
-      }
-}
-module.exports={loginUser,getUser};
+  const users = await user_info.findOne({
+    where: { Email },
+    include: [
+      { model: user_address },
+      { model: user_qualification },
+    ]
+  });
+  return res.status(201).json({
+    status: 'success',
+    message: 'Authorization  Successful',
+    data: {
+      users
+    }
+  });
+
+})
+module.exports = { loginUser, getUser };

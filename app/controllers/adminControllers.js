@@ -4,20 +4,30 @@ const jwt = require('jsonwebtoken');
 
 require('dotenv').config();
 
+const crypto = require('crypto');
+
+const sendEmail = require('../utils/email')
+
 const user_qualification = require('../models/user_qulification')
 
 const user_address = require('../models/user_address');
 
-const user_info=require('../models/user_info')
+const user_info = require('../models/user_info');
+
+const asyncErrorHandler = require('../utils/asyncErrorHandler');
+
+const appError = require('../utils/appError');
+
+const sequelize = require('../config/db');
 
 //LOGIN
-const login = async (req, res) => {
+const login = async (req, res, next) => {
 
   const { Email, Password } = req.body;
 
   if (!Email || !Password) {
-    res.status(400).json({ message: 'Email and password are required' });
-    return;
+    return next(new appError(400, "Email and password are required"));
+
   }
 
   const User = await user_info.findOne();
@@ -28,222 +38,276 @@ const login = async (req, res) => {
 
     const token = jwt.sign({
       Email
-    }, process.env.JWT_ADMIN,{expiresIn:'1h'})
+    }, process.env.JWT_ADMIN, { expiresIn: '1h' })
 
-    res.json({ token })
+    res.status(201).json({
+      status: 'Success',
+      message: 'Successfully Authenticated',
+      data: {
+        token
+      }
+    });
 
   }
   else {
-    res.status(500).json({ message: 'Username or password incorrect' })
+    return next(new appError(500, "Username or password incorrect"));
   }
 }
 
-//GETALLDATA
-const getAllData = async (req, res) => {
+//GET ALL DATA
+const getAllData = asyncErrorHandler(async (req, res, next) => {
 
+
+  const Users = await user_info.findAll({
+    include: [
+      { model: user_address },
+      { model: user_qualification },
+    ]
+  });
+  return res.status(201).json({
+    status: 'Success',
+    message: 'Authorization  Successful',
+    data: {
+      Users
+    }
+  });
+
+})
+
+
+//CREATE USER
+const create = asyncErrorHandler(async (req, res, next) => {
+  const t = await sequelize.transaction();
   try {
-    const Users = await user_info.findAll({
-      include: [
-        { model: user_address },
-        { model: user_qualification },
-      ]
-    });
-    return res.json(Users);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-}
+    const userInfo = await user_info.create(
+      { ...req.body, Password: await bcrypt.hash(req.body.Password, 10) },
+      { transaction: t }
+    );
+    const userAddress = await user_address.create(
+      { ...req.body, User_info_id: userInfo.id },
+      { transaction: t }
+    );
 
+    const userQualification = await user_qualification.create(
+      { ...req.body, User_info_id: userInfo.id },
+      { transaction: t }
+    );
 
-//CREATEUser
-const create = async (req, res) => {
-
-  try {
-
-    const { FirstName, LastName, FatherName, MotherName, DateOfBirth, Nationality, Email, Password, Gender, PhoneNumber, Occupation, Native_Place, First_Language, Address, City, State, Country, PostalCode, Degree, Institution, Skills ,Graduation_Year,FieldOfStudy,Grade} = req.body;
-    const resume = req.file;
-
-    const UserInfo = await user_info.create({
-      FirstName,
-      LastName,
-      FatherName,
-      MotherName,
-      DateOfBirth,
-      Nationality,
-      Email,
-      Password: await bcrypt.hash(Password, 10),
-      Gender,
-      PhoneNumber,
-      Occupation,
-      Native_Place,
-      First_Language,
-      Resume: resume.filename,
-
-    });
-    await user_address.create({
-      Address,
-      City,
-      State,
-      Country,
-      PostalCode,
-      User_info_id: UserInfo.id,
-
-    });
-
-   await user_qualification.create({
-      Degree,
-      Institution,
-      Skills,
-      Graduation_Year,
-      FieldOfStudy,
-      Grade,
-      User_info_id: UserInfo.id,
-
-
-    });
+    await t.commit();
 
     res.status(201).json({
-      success: true,
-      message: 'User created successfully'
+      status: 'Success',
+      message: 'User created successfully',
+      data: {
+        userInfo,
+        userAddress,
+        userQualification
+      }
     });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      message: 'Error creating User',
-      error: error.message
-    });
+  } catch (err) {
+    await t.rollback();
+    return next(new appError(500, err.errors[0].message));
+
   }
 
-}
+})
 
-//delete
-const deleteUser = async (req, res) => {
+
+//DELETE USER
+const deleteUser = asyncErrorHandler(async (req, res, next) => {
   const id = req.params['id'];
 
+  const User = await user_info.findOne({
+    where: {
+      id: id
+    }
+  });
+
+  if (!User) {
+    return next(new appError(404, "User not found"));
+  }
+
+  await user_info.destroy({
+    where: {
+      id: id
+    }
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'User successfully deleted',
+    data: {
+      Deleted_user_id: id
+    }
+  });
+
+});
+
+
+//UPDATE USER
+const update = asyncErrorHandler(async function (req, res, next) {
+  const UserId = req.params['id'];
+
+  const UserInfo = await user_info.findOne({ where: { id: UserId } });
+
+  if (!UserInfo) {
+    return next(new appError(404, "User not found"));
+  }
+
+  const updatedUser = {
+    ...req.body,
+  };
+  if (req.body.Password) {
+    return next(new appError(404, "User not able to update password, if you want to update click forgot password"));
+  }
+
+  await UserInfo.update(updatedUser);
+
+  const Useraddress = await user_address.findOne({ where: { User_info_id: UserId } });
+  if (!Useraddress) {
+    return next(new appError(404, "User not found"));
+  }
+
+  await Useraddress.update(req.body);
+
+  const Userqulification = await user_qualification.findOne({ where: { User_info_id: UserId } });
+  if (!Userqulification) {
+    return next(new appError(404, "User not found"));
+  }
+
+  await Userqulification.update(req.body);
+
+  const users = await user_info.findOne({
+    where: { id: UserId },
+    include: [
+      { model: user_address },
+      { model: user_qualification },
+    ]
+  });
+
+  res.status(200).json({
+    status: 'Success',
+    message: 'User updated successfully',
+    data: {
+      users
+    }
+  });
+});
+
+
+//FILE UPLOAD
+const fileUpload = asyncErrorHandler(async (req, res, next) => {
+  const UserId = req.params['id'];
+
+  const UserInfo = await user_info.findOne({ where: { id: UserId } });
+
+  if (!UserInfo) {
+    return next(new appError(404, "User not found"));
+  }
+
+  const resume = req.file;
+  if (!resume) {
+    return next(new appError(404, "please upload file"));
+  }
+  const updated = {
+    Resume: resume ? await resume.filename : UserInfo.Resume,   // USING TERNARY OPERATOR 
+  }
+  await UserInfo.update(updated);
+
+  res.status(200).json({
+    status: 'Success',
+    message: 'User File updated successfully',
+    data: {
+      UserInfo
+    }
+  });
+})
+
+//FORGOT PASSWORD
+const forget_password = asyncErrorHandler(async (req, res, next) => {
+
+
+ 
+  //1. Get User BASED ON POSTED EMAIL
+  const Email = req.body;
+
+  const user = await user_info.findOne({ where: Email });
+
+  const generateForgotPasswordEmail = (resetLink) => {
+    return `
+      <h1>Reset Your Password</h1>
+      <p>Hello ${user.FirstName},</p>
+      <p>You have requested to reset your password. Click on the link below to create a new password:</p>
+      <p><a href="${resetLink}">Reset Password</a></p>
+      <p>If you didn't request this, please ignore this email.</p>
+      <p>Best regards,</p>
+      <p>Support Team</p>
+    `;
+  };
+
+
+  if (!user) {
+    return next(new appError(404, "we could not find the user with the given email"));
+  }
+
+  //2.GENERATE A RANDOM TOKEN
+  var resetToken = crypto.randomBytes(32).toString('hex');
+
+  user.RestToken = resetToken;
+  user.save();
+
+  //3.SEND THE TOKEN BACK TO THE USER EMAIL
+  const resetUrl = `${req.protocol}://${req.get('host')}/reset_password/${resetToken}`;
+ 
   try {
-    const User = await user_info.findOne({
-      where: {
-        id: id
-      }
+    await sendEmail({
+      Email: user.Email,
+      subject: 'password change request received',
+      html:generateForgotPasswordEmail(resetUrl)
     });
 
-    if (!User) {
-      res.status(404).json({message:'User not found'});
-      return;
-    }
-
-     await user_info.destroy({
-      where: {
-        id: id
-      }
+    res.status(200).json({
+      status: 'success',
+      message: 'password reset link send to the user email'
     });
-
-    res.json({message:'user successfully deleted'})
-  } catch (error) {
-    res.status(500).json({message:'Error deleting row'});
+  } catch (err) {
+    return next(new appError(500, "There was a error"));
   }
-};
+
+})
 
 
-//udate user
-const update = async function (req, res) {
-  try {
-    const UserId = req.params['id'];
+//RESET PASSWORD
+const reset_password = async (req, res, next) => {
 
-    const UserInfo = await user_info.findOne({ where: { id: UserId } });
-
-    if (!UserInfo) {
-      return res.status(404).json({message:"User info not found"});
+  const checkToken = req.params.token;
+  const user = await user_info.findOne({
+    where: {
+      RestToken: checkToken
     }
-
-    const {
-      FirstName,
-      LastName,
-      FatherName,
-      MotherName,
-      DateOfBirth,
-      Nationality,
-      Email,
-      Password,
-      Gender,
-      PhoneNumber,
-      Occupation,
-      Native_Place,
-      First_Language,
-      Address,
-      City,
-      State,
-      Country,
-      PostalCode,
-      Degree,
-      Institution,
-      Skills,
-      Graduation_Year,
-      FieldOfStudy,
-      Grade
-    } = req.body;
-    const resume = req.file;
+  });
 
 
-    const updatedUser = {
-      FirstName ,
-      LastName,
-      FatherName,
-      MotherName ,
-      DateOfBirth ,
-      Nationality ,
-      Email,
-      Password: Password ? await bcrypt.hash(Password, 10) : UserInfo.Password,   // using ternary operator 
-      Gender,
-      PhoneNumber,
-      Occupation,
-      Native_Place,
-      First_Language,
-      Resume:  resume ? await resume.filename : UserInfo.Resume,   // using ternary operator 
-        };
-
-    await UserInfo.update(updatedUser);
-
-    const Useraddress = await user_address.findOne({ where: { User_info_id: UserId } });
-    if (!Useraddress) {
-      return res.status(404).json({message:"User address not found"});
-    }
-
-    const updatedUserAddress = {
-      Address,
-      City,
-      State,
-      Country,
-      PostalCode
-    };
-
-    await Useraddress.update(updatedUserAddress);
-
-    const Userqulification = await user_qualification.findOne({ where: { User_info_id: UserId } });
-    if (!Userqulification) {
-      return res.status(404).json({message:"User qualification not found"});
-    }
-
-    const updatedUserQualification = {
-      Degree,
-      Institution,
-      Skills,
-      Graduation_Year,
-      FieldOfStudy,
-      Grade
-    };
-
-    await Userqulification.update(updatedUserQualification);
-
-    res.status(200).json({ message: "User updated successfully!" });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error in update data' });
+  if (!user) {
+    return next(new appError(500, "Token is invalid"));
   }
-};
 
+  user.Password = req.body.Password ? await bcrypt.hash(req.body.Password, 10) : user.Password;
+  user.RestToken = null;
 
-module.exports = { getAllData, login, create, deleteUser, update };
+  user.save();
+
+  const Email = user.Email;
+  const token = jwt.sign({
+    Email
+  }, process.env.JWT_ADMIN, { expiresIn: '1h' })
+
+  res.status(201).json({
+    status: 'Success',
+    message: 'successfully password reset',
+    data: {
+      token
+    }
+  });
+}
+module.exports = { getAllData, login, create, deleteUser, update, fileUpload, forget_password, reset_password };

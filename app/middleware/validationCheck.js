@@ -1,8 +1,9 @@
 
 const Joi = require('joi');
+const appError = require('../utils/appError')
 
 const validateRegistration = (req, res, next) => {
-  const Domains = ['gmail.com', 'yahoo.com', 'hotmail.com'];
+  const Domains = ['gmail.com', 'yahoo.com', 'hotmail.com','outlook.com'];
   const info = Joi.object({
     FirstName: Joi.string().trim().min(2).pattern(/^[a-zA-Z]+$/)
       .messages({
@@ -38,9 +39,13 @@ const validateRegistration = (req, res, next) => {
       }),
     Nationality: Joi.string().trim().valid(
       'Indian',
-      'Albanian',
-      'Algerian',
-    ),
+      'USA',
+      'Dubai',
+    ).messages({
+      'string.base': 'Nationality must be a string',
+      'any.required': 'Nationality is required',
+      'any.only': 'Invalid nationality. Please select a valid option.'
+    }),
     Email: Joi.string().trim().email().custom((value, helpers) => {
       const domain = value.split('@')[1];
       if (!Domains.includes(domain)) {
@@ -76,9 +81,20 @@ const validateRegistration = (req, res, next) => {
       .messages({
         'string.min': 'Occupation should have a minimum length of {#limit}',
       }),
-    Native_Place: Joi.string().trim().min(2).max(20),
-    First_Language: Joi.string().trim().min(2).max(20),
-    Resume: Joi.string(),
+    Native_Place: Joi.string().trim().min(2).max(20)
+      .messages({
+        'string.base': 'Native place must be a string',
+        'string.empty': 'Native place is required',
+        'string.min': 'Native place must have at least {#limit} characters',
+        'string.max': 'Native place can have at most {#limit} characters'
+      }),
+    First_Language: Joi.string().trim().min(2).max(20)
+      .messages({
+        'string.base': 'First language must be a string',
+        'string.empty': 'First language is required',
+        'string.min': 'First language must have at least {#limit} characters',
+        'string.max': 'First language can have at most {#limit} characters'
+      }),
     Address: Joi.string().trim().min(5)
       .messages({
         'any.required': 'Address is required',
@@ -117,10 +133,31 @@ const validateRegistration = (req, res, next) => {
         'number.integer': 'Year must be an integer',
         'number.positive': 'Year must be a positive number',
       }),
-    Institution: Joi.string().trim().allow('').optional(),
-    Skills: Joi.string(),
-    Graduation_Year: Joi.number().integer().positive().allow(null).optional(),
-    FieldOfStudy: Joi.string().trim().allow('').optional(),
+    Institution: Joi.string().trim().allow('').optional()
+      .messages({
+        'string.base': 'Institution must be a string',
+        'string.empty': 'Institution cannot be empty'
+      }),
+    Skills: Joi.array()
+      .items(Joi.string().required())
+      .messages({
+        'array.base': 'Skills must be an array',
+        'array.empty': 'Skills cannot be empty',
+        'any.required': 'Skills are required',
+        'any.only': 'Invalid skill. Please provide a valid skill.'
+      }),
+
+    Graduation_Year: Joi.number().integer().positive().allow(null).optional()
+      .messages({
+        'number.base': 'Graduation year must be a number',
+        'number.integer': 'Graduation year must be an integer',
+        'number.positive': 'Graduation year must be a positive number'
+      }),
+    FieldOfStudy: Joi.string().trim().allow('').optional()
+      .messages({
+        'string.base': 'Field of study must be a string',
+        'string.empty': 'Field of study cannot be empty'
+      }),
     Grade: Joi.string().trim()
       .messages({
         'any.required': 'Grade is required',
@@ -131,7 +168,7 @@ const validateRegistration = (req, res, next) => {
 
   const { error: infoError } = info.validate(req.body);
   if (infoError) {
-    return res.status(400).json({ error: infoError.details[0].message });
+    return next(new appError(400, infoError.details[0].message));
   }
   next();
 };

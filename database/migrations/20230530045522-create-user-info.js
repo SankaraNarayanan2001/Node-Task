@@ -67,7 +67,11 @@ module.exports = {
       },
       Resume: {
         type: Sequelize.STRING, // image upload 
-        allowNull: false,
+        allowNull: true,
+      },
+      RestToken:{
+        type:Sequelize.STRING,
+        allowNull:true
       }
     });
   },

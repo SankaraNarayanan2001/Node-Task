@@ -6,8 +6,8 @@ const userController=require('../controllers/userControllers');
 
 const validation=require('../middleware/validationCheck')
 
-router.post('/loginuser',userController.loginUser);
+router.route('/loginuser').post(userController.loginUser);
 
-router.get('/getUser',jwt.user,validation.validateRegistration,userController.getUser)
+router.route('/getUser').get(jwt.user,validation.validateRegistration,userController.getUser)
 
 module.exports=router;

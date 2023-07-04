@@ -1,6 +1,5 @@
-const sequelize = require('../config/db')
-
-const { DataTypes, Model } = require('sequelize');
+const sequelize=require('../config/db');
+const { DataTypes, Model} = require('sequelize');
 
 const User_info=require('../models/user_info')
 
