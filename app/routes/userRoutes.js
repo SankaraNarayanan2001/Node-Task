@@ -1,13 +1,15 @@
-const router=require('express').Router();
+const router = require("express").Router();
 
-const jwt=require('../middleware/jwtcheck');
+const jwt = require("../middleware/jwtcheck");
 
-const userController=require('../controllers/userControllers');
+const userController = require("../controllers/userControllers");
 
-const validation=require('../middleware/validationCheck')
+const validation = require("../middleware/validationCheck");
 
-router.route('/loginuser').post(userController.loginUser);
+router.route("/loginuser").post(userController.loginUser);
 
-router.route('/getUser').get(jwt.user,validation.validateRegistration,userController.getUser)
+router
+  .route("/getUser")
+  .get(jwt.user, validation.validateRegistration, userController.getUser);
 
-module.exports=router;
+module.exports = router;

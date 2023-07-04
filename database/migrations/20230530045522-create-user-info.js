@@ -1,15 +1,14 @@
-'use strict';
+"use strict";
 /** @type {import('sequelize-cli').Migration} */
-
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('User_info', {
+    await queryInterface.createTable("User_info", {
       id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
         autoIncrement: true,
-        allowNull: false
+        allowNull: false,
       },
       FirstName: {
         type: Sequelize.STRING,
@@ -45,7 +44,7 @@ module.exports = {
         allowNull: false,
       },
       Gender: {
-        type: Sequelize.ENUM('Male', 'Female', 'Other'), //dropdown
+        type: Sequelize.ENUM("Male", "Female", "Other"), //dropdown
         allowNull: false,
       },
       PhoneNumber: {
@@ -55,28 +54,27 @@ module.exports = {
       },
       Occupation: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       Native_Place: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       First_Language: {
         type: Sequelize.STRING,
-        allowNull: false
+        allowNull: false,
       },
       Resume: {
-        type: Sequelize.STRING, // image upload 
+        type: Sequelize.STRING, // image upload
         allowNull: true,
       },
-      RestToken:{
-        type:Sequelize.STRING,
-        allowNull:true
-      }
+      RestToken: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('User_info');
-  }
+    await queryInterface.dropTable("User_info");
+  },
 };
-

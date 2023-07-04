@@ -1,17 +1,19 @@
-const Sequelize = require('sequelize');
+const Sequelize = require("sequelize");
 
+require("dotenv").config();
 
-require('dotenv').config();
+const sequelize = new Sequelize(
+  "novastrid",
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
+  {
+    dialect: "mysql",
+  }
+);
 
-const sequelize = new Sequelize('novastrid', process.env.DB_USER, process.env.DB_PASSWORD, {
-    dialect: 'mysql'
-});
+sequelize.authenticate();
+console.log("Connection has been established successfully.");
 
-
-    sequelize.authenticate();
-    console.log('Connection has been established successfully.');
-
-    // console.error('Unable to connect to the database:', error);
-
+// console.error('Unable to connect to the database:', error);
 
 module.exports = sequelize;
